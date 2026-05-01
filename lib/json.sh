@@ -26,12 +26,23 @@ _json_trap() {
 
 # ---- config ----
 
-# Path to awk engine.
-# Default: <cwd>/lib/awk/json_engine.awk. Override via _JSON_HOME.
-if [ -n "$_JSON_HOME" ]; then
-    _JSON_AWK="$_JSON_HOME/lib/awk/json_engine.awk"
-else
-    _JSON_AWK="$(pwd)/lib/awk/json_engine.awk"
+# Path to awk engine. Try in order:
+#   1. _JSON_HOME override (set before sourcing)
+#   2. <cwd>/hush-json/lib/...  (submodule in hush-bot)
+#   3. <cwd>/lib/awk/...        (standalone hush-json repo)
+_find_awk() {
+    if [ -n "$_JSON_HOME" ] && [ -f "$_JSON_HOME/lib/awk/json_engine.awk" ]; then
+        echo "$_JSON_HOME/lib/awk/json_engine.awk"; return
+    fi
+    for _d in "$(pwd)/hush-json" "$(pwd)"; do
+        [ -f "$_d/lib/awk/json_engine.awk" ] && { echo "$_d/lib/awk/json_engine.awk"; return; }
+    done
+    echo ""
+}
+_JSON_AWK="$(_find_awk)"
+if [ -z "$_JSON_AWK" ]; then
+    echo "hush-json: cannot find json_engine.awk. Set _JSON_HOME before sourcing." >&2
+    exit 1
 fi
 
 [ "${_JSON_DEBUG:-0}" = "1" ] && set -x
