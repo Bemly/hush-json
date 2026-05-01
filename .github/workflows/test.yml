@@ -7,7 +7,9 @@ on:
 jobs:
   test:
     runs-on: ubuntu-slim
+    container:
+      image: busybox:musl
     steps:
       - uses: actions/checkout@v4
-      - name: Run tests in busybox
-        run: docker run --rm -v $PWD:/test busybox:musl hush /test/test/run.sh
+      - name: Run tests
+        run: hush test/run.sh
