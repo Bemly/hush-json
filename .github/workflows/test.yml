@@ -1,0 +1,13 @@
+name: test
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-slim
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run tests in busybox
+        run: docker run --rm -v $PWD:/test busybox:musl hush /test/test/run.sh
