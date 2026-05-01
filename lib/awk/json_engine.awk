@@ -138,13 +138,13 @@ function fk(s, tg,    i, c, d, k) {
 
 function dg(s, k) {
     p = fk(s, k)
-    if (p == 0) { print "NOTFOUND"; exit 1 }
+    if (p == 0) { print "hush-json: key '" k "' not found" > "/dev/stderr"; exit 1 }
     print xv(s, p)
 }
 
 function dt(s, k) {
     p = fk(s, k)
-    if (p == 0) { print "notfound"; exit 1 }
+    if (p == 0) { print "hush-json: key '" k "' not found" > "/dev/stderr"; exit 1 }
     xv(s, p)
     print vt
 }
@@ -173,9 +173,9 @@ function dk(s,    i, c, d, k, fi) {
 
 function dl(s, k,    p, v, j, c, d) {
     p = fk(s, k)
-    if (p == 0) { print "NOTFOUND"; exit 1 }
+    if (p == 0) { print "hush-json: key '" k "' not found" > "/dev/stderr"; exit 1 }
     v = xv(s, p)
-    if (vt != "array") { print "NOTARRAY"; exit 1 }
+    if (vt != "array") { print "hush-json: key '" k "' is not an array (type: " vt ")" > "/dev/stderr"; exit 1 }
     if (v == "[]" || v == "[ ]") { print 0; exit 0 }
     n = 1; d = 0
     j = ws(v, 2)

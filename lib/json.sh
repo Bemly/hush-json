@@ -2,6 +2,30 @@
 # Source this file: . ./lib/json.sh
 # Depends on: lib/awk/json_engine.awk (awk state machine)
 
+# ---- error handling ----
+# hush has no trap ERR, no FUNCNAME, no BASH_LINENO.
+# Best we can do: manual exit code checks + line-number reporting.
+# Set _JSON_DEBUG=1 before sourcing to enable set -x tracing.
+
+_JSON_ERROR=""   # last error message
+_JSON_ELINE=""   # line number where last error occurred
+
+# die <msg> [exit_code]
+die() {
+    _msg="$1" _code="${2:-1}"
+    printf 'hush-json ERROR (line %s): %s\n' "${_JSON_ELINE:-?}" "$_msg" >&2
+    exit "$_code"
+}
+
+# _json_trap <line_no> <msg> — record error context, return 1
+_json_trap() {
+    _JSON_ELINE="$1"
+    _JSON_ERROR="$2"
+    return 1
+}
+
+# ---- config ----
+
 # Path to awk engine.
 # Default: <cwd>/lib/awk/json_engine.awk. Override via _JSON_HOME.
 if [ -n "$_JSON_HOME" ]; then
@@ -9,6 +33,8 @@ if [ -n "$_JSON_HOME" ]; then
 else
     _JSON_AWK="$(pwd)/lib/awk/json_engine.awk"
 fi
+
+[ "${_JSON_DEBUG:-0}" = "1" ] && set -x
 
 # ---- internal helpers ----
 
@@ -21,10 +47,19 @@ _json_input() {
     fi
 }
 
-# Call awk engine with given mode and key
+# Call awk engine. Result on stdout. On failure sets _JSON_ERROR and returns 1.
 _json_awk() {
     _mode="$1" _key="$2" _json="$3"
-    printf '%s\n' "$_json" | awk -v md="$_mode" -v k="$_key" -f "$_JSON_AWK"
+    _errf="/tmp/hj-err.$$"
+    printf '%s\n' "$_json" | awk -v md="$_mode" -v k="$_key" -f "$_JSON_AWK" 2>"$_errf"
+    _rc=$?
+    if [ $_rc -ne 0 ]; then
+        _JSON_ERROR="$(cat "$_errf")"
+        rm -f "$_errf"
+        return 1
+    fi
+    rm -f "$_errf"
+    return 0
 }
 
 # Detect JSON value type for generation
@@ -51,46 +86,60 @@ _json_val_type() {
 }
 
 # ---- parse API ----
+# Each returns the value on stdout, or returns 1 and sets _JSON_ERROR on failure.
+# Usage: json_get <json> <key>   OR   echo <json> | json_get '' <key>
 
-# json_get <json> <key>    or   echo <json> | json_get '' <key>
+_json_parse() {
+    _mode="$1" _json="$2" _key="$3"
+    _outf="/tmp/hj-out.$$"
+    # Call _json_awk directly (NOT in subshell) so _JSON_ERROR survives
+    _json_awk "$_mode" "$_key" "$_json" >"$_outf"
+    _rc=$?
+    if [ $_rc -ne 0 ]; then
+        _json_trap "$LINENO" "$_JSON_ERROR"
+        rm -f "$_outf"
+        return 1
+    fi
+    cat "$_outf"
+    rm -f "$_outf"
+    return 0
+}
+
 json_get() {
     _input="$(_json_input "$1")"
     if [ -n "$1" ] && [ -n "$2" ]; then
-        _json_awk get "$2" "$_input"
+        _json_parse get "$_input" "$2"
     elif [ -z "$1" ]; then
-        _json_awk get "$2" "$_input"
+        _json_parse get "$_input" "$2"
     else
-        _json_awk get "$1" "$_input"
+        _json_parse get "$_input" "$1"
     fi
 }
 
-# json_type <json> <key>
 json_type() {
     _input="$(_json_input "$1")"
     if [ -n "$1" ] && [ -n "$2" ]; then
-        _json_awk type "$2" "$_input"
+        _json_parse type "$_input" "$2"
     elif [ -z "$1" ]; then
-        _json_awk type "$2" "$_input"
+        _json_parse type "$_input" "$2"
     else
-        _json_awk type "$1" "$_input"
+        _json_parse type "$_input" "$1"
     fi
 }
 
-# json_keys <json>
 json_keys() {
     _input="$(_json_input "$1")"
-    _json_awk keys "" "$_input"
+    _json_parse keys "$_input" ""
 }
 
-# json_len <json> <key>
 json_len() {
     _input="$(_json_input "$1")"
     if [ -n "$1" ] && [ -n "$2" ]; then
-        _json_awk len "$2" "$_input"
+        _json_parse len "$_input" "$2"
     elif [ -z "$1" ]; then
-        _json_awk len "$2" "$_input"
+        _json_parse len "$_input" "$2"
     else
-        _json_awk len "$1" "$_input"
+        _json_parse len "$_input" "$1"
     fi
 }
 
