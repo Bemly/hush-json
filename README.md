@@ -109,7 +109,7 @@ This is because BusyBox awk cannot represent real control characters (`"\n"` is 
 ## Testing
 
 ```sh
-docker run --rm -v $(pwd):/test busybox:musl sh /test/test/run.sh
+docker run --rm -v $(pwd):/test busybox:musl hush /test/test/run.sh
 ```
 
 ## License
