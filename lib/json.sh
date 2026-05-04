@@ -119,11 +119,11 @@ _json_parse() {
 json_get() {
     _input="$(_json_input "$1")"
     if [ -n "$1" ] && [ -n "$2" ]; then
-        _json_parse get "$_input" "$2"
+        _json_parse get "$_input" "$2" || { _ERROR="json.get: $_JSON_ERROR"; return 1; }
     elif [ -z "$1" ]; then
-        _json_parse get "$_input" "$2"
+        _json_parse get "$_input" "$2" || { _ERROR="json.get: $_JSON_ERROR"; return 1; }
     else
-        _json_parse get "$_input" "$1"
+        _json_parse get "$_input" "$1" || { _ERROR="json.get: $_JSON_ERROR"; return 1; }
     fi
 }
 
