@@ -205,6 +205,20 @@ json_arr() {
 	printf '%s' "$_out"
 }
 
+# json_arr_len <json_array>
+# Returns length of JSON array (direct, no key lookup)
+json_arr_len() {
+	_input="$(_json_input "$1")"
+	_json_parse alen "$_input" ""
+}
+
+# json_arr_at <json_array> <index>
+# Returns element at index (0-based) from JSON array
+json_arr_at() {
+	_input="$(_json_input "$1")"
+	_json_parse aget "$_input" "$2"
+}
+
 # ---- short aliases ----
 hjg() { json_get "$@"; }
 hjt() { json_type "$@"; }
@@ -213,3 +227,5 @@ hjl() { json_len "$@"; }
 hje() { json_escape "$@"; }
 hjo() { json_obj "$@"; }
 hja() { json_arr "$@"; }
+hjal() { json_arr_len "$@"; }
+hjaa() { json_arr_at "$@"; }

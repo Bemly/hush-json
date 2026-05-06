@@ -16,6 +16,8 @@ BEGIN {
 
     if (md == "keys") dk(s)
     else if (md == "len") dl(s, k)
+    else if (md == "alen") al(s)
+    else if (md == "aget") da(s, int(k))
     else if (md == "type") dt(s, k)
     else dg(s, k)
 }
@@ -188,4 +190,52 @@ function dl(s, k,    p, v, j, c, d) {
         else j++
     }
     print n
+}
+
+# al: array length (direct — input is the array itself, not an object)
+function al(s,    j, c, n) {
+    if (substr(s, ws(s, 1), 1) != "[") {
+        print "hush-json: not an array" > "/dev/stderr"; exit 1
+    }
+    s = substr(s, ws(s, 1))
+    if (s == "[]" || s == "[ ]") { print 0; exit 0 }
+    n = 1
+    j = ws(s, 2)
+    while (j <= length(s)) {
+        c = substr(s, j, 1)
+        if (c == "\"") { xs(s, j); j = ep }
+        else if (c == "[" || c == "{") { xb(s, j, c, (c == "[" ? "]" : "}")); j = ep }
+        else if (c == ",") { n++; j++ }
+        else if (c == "]") break
+        else j++
+    }
+    print n
+}
+
+# da: dump array element at index n (0-based) — direct array input
+function da(s, n,    j, c, i, v) {
+    if (substr(s, ws(s, 1), 1) != "[") {
+        print "hush-json: not an array" > "/dev/stderr"; exit 1
+    }
+    i = 0
+    j = ws(s, 2)
+    c = substr(s, j, 1)
+    if (c == "]") {
+        print "hush-json: index " n " out of bounds (empty)" > "/dev/stderr"; exit 1
+    }
+    while (j <= length(s)) {
+        j = ws(s, j)
+        if (j > length(s)) break
+        c = substr(s, j, 1)
+        if (c == "]") break
+
+        v = xv(s, j)
+        if (i == n) { print v; exit 0 }
+        i++
+        j = ep
+        j = ws(s, j)
+        c = substr(s, j, 1)
+        if (c == ",") j++
+    }
+    print "hush-json: index " n " out of bounds" > "/dev/stderr"; exit 1
 }
