@@ -138,13 +138,61 @@ function fk(s, tg,    i, c, d, k) {
 
 # ---- mode handlers ----
 
-function dg(s, k) {
+function dg(s, k,    c, j, v, p) {
+    c = substr(s, ws(s, 1), 1)
+    if (c == "[") {
+        j = ws(s, 2)
+        if (substr(s, j, 1) == "]") {
+            print "hush-json: key '" k "' not found" > "/dev/stderr"; exit 1
+        }
+        while (j <= length(s)) {
+            j = ws(s, j)
+            c = substr(s, j, 1)
+            if (c == "]") break
+            if (c == "{") {
+                v = xb(s, j, "{", "}")
+                p = fk(v, k)
+                if (p != 0) { print xv(v, p); return }
+                j = ep
+            } else {
+                xv(s, j); j = ep
+            }
+            j = ws(s, j)
+            c = substr(s, j, 1)
+            if (c == ",") j++
+        }
+        print "hush-json: key '" k "' not found" > "/dev/stderr"; exit 1
+    }
     p = fk(s, k)
     if (p == 0) { print "hush-json: key '" k "' not found" > "/dev/stderr"; exit 1 }
     print xv(s, p)
 }
 
-function dt(s, k) {
+function dt(s, k,    c, j, v, p) {
+    c = substr(s, ws(s, 1), 1)
+    if (c == "[") {
+        j = ws(s, 2)
+        if (substr(s, j, 1) == "]") {
+            print "hush-json: key '" k "' not found" > "/dev/stderr"; exit 1
+        }
+        while (j <= length(s)) {
+            j = ws(s, j)
+            c = substr(s, j, 1)
+            if (c == "]") break
+            if (c == "{") {
+                v = xb(s, j, "{", "}")
+                p = fk(v, k)
+                if (p != 0) { xv(v, p); print vt; return }
+                j = ep
+            } else {
+                xv(s, j); j = ep
+            }
+            j = ws(s, j)
+            c = substr(s, j, 1)
+            if (c == ",") j++
+        }
+        print "hush-json: key '" k "' not found" > "/dev/stderr"; exit 1
+    }
     p = fk(s, k)
     if (p == 0) { print "hush-json: key '" k "' not found" > "/dev/stderr"; exit 1 }
     xv(s, p)
@@ -173,19 +221,59 @@ function dk(s,    i, c, d, k, fi) {
     print ""
 }
 
-function dl(s, k,    p, v, j, c, d) {
+function dl(s, k,    c, j, v, p, n) {
+    c = substr(s, ws(s, 1), 1)
+    if (c == "[") {
+        j = ws(s, 2)
+        if (substr(s, j, 1) == "]") {
+            print "hush-json: key '" k "' not found" > "/dev/stderr"; exit 1
+        }
+        while (j <= length(s)) {
+            j = ws(s, j)
+            c = substr(s, j, 1)
+            if (c == "]") break
+            if (c == "{") {
+                v = xb(s, j, "{", "}")
+                p = fk(v, k)
+                if (p != 0) {
+                    v = xv(v, p)
+                    if (vt != "array") { print "hush-json: key '" k "' is not an array (type: " vt ")" > "/dev/stderr"; exit 1 }
+                    if (v == "[]" || v == "[ ]") { print 0; exit 0 }
+                    n = 1
+                    j = ws(v, 2)
+                    while (j <= length(v)) {
+                        c = substr(v, j, 1)
+                        if (c == "\"") { xs(v, j); j = ep }
+                        else if (c == "[" || c == "{") { xb(v, j, c, (c == "[" ? "]" : "}")); j = ep }
+                        else if (c == ",") { n++; j++ }
+                        else if (c == "]") break
+                        else j++
+                    }
+                    print n
+                    return
+                }
+                j = ep
+            } else {
+                xv(s, j); j = ep
+            }
+            j = ws(s, j)
+            c = substr(s, j, 1)
+            if (c == ",") j++
+        }
+        print "hush-json: key '" k "' not found" > "/dev/stderr"; exit 1
+    }
     p = fk(s, k)
     if (p == 0) { print "hush-json: key '" k "' not found" > "/dev/stderr"; exit 1 }
     v = xv(s, p)
     if (vt != "array") { print "hush-json: key '" k "' is not an array (type: " vt ")" > "/dev/stderr"; exit 1 }
     if (v == "[]" || v == "[ ]") { print 0; exit 0 }
-    n = 1; d = 0
+    n = 1
     j = ws(v, 2)
     while (j <= length(v)) {
         c = substr(v, j, 1)
         if (c == "\"") { xs(v, j); j = ep }
         else if (c == "[" || c == "{") { xb(v, j, c, (c == "[" ? "]" : "}")); j = ep }
-        else if (c == "," && d == 0) { n++; j++ }
+        else if (c == ",") { n++; j++ }
         else if (c == "]") break
         else j++
     }
