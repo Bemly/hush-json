@@ -56,12 +56,30 @@ test_arr_nested() {
     assert_eq "$result" '[{"x":1},{"x":1}]' "arr nested objects"
 }
 
+test_escape_control_chars() {
+    # A bare LF/TAB/CR in the body produced invalid JSON and the server
+    # answered 500 (QQ 50015001). They must be emitted as two-char escapes.
+    result="$(json_escape "$(printf 'l1\nl2')")"
+    assert_eq "$result" '"l1\nl2"' "escape real LF"
+    result="$(json_escape "$(printf 'a\tb\rc')")"
+    assert_eq "$result" '"a\tb\rc"' "escape real TAB and CR"
+    result="$(json_escape "$(printf 'a\010b\014c')")"
+    assert_eq "$result" '"a\bb\fc"' "escape real BS and FF"
+}
+
+test_obj_multiline() {
+    result="$(json_obj content "$(printf '第一行\n第二行')")"
+    assert_eq "$result" '{"content":"第一行\n第二行"}' "obj multiline value"
+}
+
 test_escape_basic
 test_escape_quote
 test_escape_backslash
+test_escape_control_chars
 test_obj_basic
 test_obj_mixed_types
 test_obj_single_pair
+test_obj_multiline
 test_obj_empty
 test_arr_basic
 test_arr_mixed

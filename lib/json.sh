@@ -159,8 +159,13 @@ json_len() {
 # json_escape <string> — escape for JSON, wrap in double quotes
 json_escape() {
 	_s="$1"
-    # Must escape \ first, then "
-	_s="$(printf '%s' "$_s" | sed 's/\\/\\\\/g; s/"/\\"/g')"
+    # Must escape \ first, then ", then real control characters.
+    # A bare LF/CR/TAB inside a JSON string produces an invalid body
+    # (servers answer 500 / parse error), so emit the two-char escapes.
+    # The parser side (json_engine.awk xs()) keeps such escapes literal
+    # by design, so values still round-trip byte for byte.
+	_s="$(printf '%s' "$_s" | sed 's/\\/\\\\/g; s/"/\\"/g' \
+		| awk 'BEGIN{ORS=""} { if (NR>1) printf "\\n"; _g=$0; gsub(/\t/,"\\\\t",_g); gsub(/\r/,"\\\\r",_g); gsub(/\014/,"\\\\f",_g); gsub(/\010/,"\\\\b",_g); printf "%s", _g }')"
 	printf '"%s"' "$_s"
 }
 
